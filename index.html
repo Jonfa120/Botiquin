@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botiquín Pro - Jonfa</title>
+    <style>
+        :root { --primary: #ff4757; --bg: #1e272e; --card: #2f3542; --text: #ffffff; --accent: #2ed573; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); }
+        .container { max-width: 400px; margin: auto; background: var(--card); padding: 20px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+        h2 { text-align: center; margin-top: 0; color: var(--primary); letter-spacing: 1px; }
+        
+        .input-group { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom: 20px; }
+        label { font-weight: bold; font-size: 13px; display: block; margin-bottom: 5px; color: #a4b0be; }
+        input[type="text"] { width: 100%; padding: 12px; border: none; background: #57606f; border-radius: 10px; color: white; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
+        
+        .time-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        input[type="time"] { flex: 1; padding: 10px; border: none; background: #57606f; border-radius: 10px; color: white; font-size: 16px; }
+        .btn-plus { background: var(--accent); color: white; border: none; width: 50px; border-radius: 10px; font-size: 24px; cursor: pointer; font-weight: bold; }
+        
+        #tempTags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .tag { background: rgba(46, 213, 115, 0.2); color: var(--accent); padding: 6px 12px; border-radius: 15px; font-size: 13px; font-weight: bold; border: 1px solid var(--accent); }
+
+        .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 5px 15px rgba(255, 71, 87, 0.3); }
+        
+        .alarm-item { background: #57606f; padding: 15px; border-radius: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid var(--primary); transition: 0.3s; }
+        .alarm-info b { font-size: 18px; display: block; }
+        .alarm-info span { color: #ffa502; font-weight: bold; font-size: 15px; }
+        
+        .btn-del { background: rgba(255, 71, 87, 0.1); color: var(--primary); border: 1px solid var(--primary); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .empty { text-align: center; color: #a4b0be; font-size: 14px; margin-top: 20px; font-style: italic; }
+        
+        .signature { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); font-weight: bold; color: #747d8c; letter-spacing: 2px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>MI BOTIQUÍN</h2>
+    
+    <div class="input-group">
+        <label>MEDICAMENTO</label>
+        <input type="text" id="medName" placeholder="Ibuprofeno, etc.">
+        
+        <label>HORAS DE TOMA</label>
+        <div class="time-row">
+            <input type="time" id="timeInput">
+            <button class="btn-plus" onclick="addTime()">+</button>
+        </div>
+        <div id="tempTags"></div>
+        
+        <button class="btn-save" onclick="saveAll()">GUARDAR PLAN</button>
+    </div>
+
+    <div id="alarmList"></div>
+
+    <div class="signature">By: Jonfa</div>
+</div>
+
+<script>
+    let tempArray = [];
+    let database = JSON.parse(localStorage.getItem('jonfa_health')) || [];
+
+    function addTime() {
+        const val = document.getElementById('timeInput').value;
+        if (val && !tempArray.includes(val)) {
+            tempArray.push(val);
+            renderTags();
+            document.getElementById('timeInput').value = "";
+        }
+    }
+
+    function renderTags() {
+        const box = document.getElementById('tempTags');
+        box.innerHTML = tempArray.map(t => `<span class="tag">🕒 ${t}</span>`).join('');
+    }
+
+    function saveAll() {
+        const name = document.getElementById('medName').value;
+        if (name && tempArray.length > 0) {
+            tempArray.forEach(t => {
+                database.push({ id: Date.now() + Math.random(), name: name.toUpperCase(), time: t });
+            });
+            tempArray = [];
+            document.getElementById('medName').value = "";
+            renderTags();
+            refresh();
+        } else {
+            alert("Completa el nombre y pulsa (+) en las horas");
+        }
+    }
+
+    function refresh() {
+        const list = document.getElementById('alarmList');
+        database.sort((a, b) => a.time.localeCompare(b.time));
+        
+        list.innerHTML = database.length === 0 ? '<p class="empty">Sin tomas programadas</p>' : '';
+        
+        database.forEach((m) => {
+            list.innerHTML += `
+                <div class="alarm-item">
+                    <div class="alarm-info">
+                        <b>${m.name}</b>
+                        <span>🕒 ${m.time}</span>
+                    </div>
+                    <button class="btn-del" onclick="remove(${m.id})">BORRAR</button>
+                </div>
+            `;
+        });
+        localStorage.setItem('jonfa_health', JSON.stringify(database));
+    }
+
+    function remove(id) {
+        database = database.filter(i => i.id !== id);
+        refresh();
+    }
+
+    // Monitor de tiempo real
+    setInterval(() => {
+        const now = new Date();
+        const nowTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        
+        database.forEach(m => {
+            if (m.time === nowTime && !m.active) {
+                alert(`🚨 ¡HAY QUE TOMAR: ${m.name}! (${m.time})`);
+                m.active = true;
+            } else if (m.time !== nowTime) {
+                m.active = false;
+            }
+        });
+    }, 20000);
+
+    refresh();
+</script>
+
+</body>
+</html>
