@@ -1,0 +1,16 @@
+{
+  "name": "Botiquín Jonfa",
+  "short_name": "Botiquín",
+  "description": "Control de medicinas By: Jonfa",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1e272e",
+  "theme_color": "#ff4757",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/822/822143.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
