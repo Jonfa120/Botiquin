@@ -62,6 +62,21 @@
     let tempArray = [];
     let database = JSON.parse(localStorage.getItem('jonfa_health')) || [];
 
+    // REGISTRAR EL SERVICE WORKER PARA NOTIFICACIONES PUSH
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            console.log('Service Worker Activo');
+        });
+    }
+
+    // PEDIR PERMISO DE NOTIFICACIONES AL CARGAR
+    function pedirPermiso() {
+        if (Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
+    }
+    window.onload = pedirPermiso;
+
     function addTime() {
         const val = document.getElementById('timeInput').value;
         if (val && !tempArray.includes(val)) {
@@ -86,27 +101,19 @@
             document.getElementById('medName').value = "";
             renderTags();
             refresh();
-        } else {
-            alert("Completa el nombre y pulsa (+) en las horas");
         }
     }
 
     function refresh() {
         const list = document.getElementById('alarmList');
         database.sort((a, b) => a.time.localeCompare(b.time));
-        
         list.innerHTML = database.length === 0 ? '<p class="empty">Sin tomas programadas</p>' : '';
-        
         database.forEach((m) => {
             list.innerHTML += `
                 <div class="alarm-item">
-                    <div class="alarm-info">
-                        <b>${m.name}</b>
-                        <span>🕒 ${m.time}</span>
-                    </div>
+                    <div class="alarm-info"><b>${m.name}</b><span>🕒 ${m.time}</span></div>
                     <button class="btn-del" onclick="remove(${m.id})">BORRAR</button>
-                </div>
-            `;
+                </div>`;
         });
         localStorage.setItem('jonfa_health', JSON.stringify(database));
     }
@@ -116,20 +123,26 @@
         refresh();
     }
 
-    // Monitor de tiempo real
+    // MONITOR QUE ENVÍA LA ALERTA AL SERVICE WORKER (SEGUNDO PLANO)
     setInterval(() => {
         const now = new Date();
         const nowTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
         
         database.forEach(m => {
             if (m.time === nowTime && !m.active) {
-                alert(`🚨 ¡HAY QUE TOMAR: ${m.name}! (${m.time})`);
+                // Enviar mensaje al Service Worker para mostrar notificación push
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'ALERTA_MEDICINA',
+                        med: m.name
+                    });
+                }
                 m.active = true;
             } else if (m.time !== nowTime) {
                 m.active = false;
             }
         });
-    }, 20000);
+    }, 15000);
 
     refresh();
 </script>
